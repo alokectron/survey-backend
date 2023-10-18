@@ -1,12 +1,25 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
-import bodyParser from 'body-parser';
+import bodyParser from "body-parser";
 import cors from "cors";
-const corsOptions ={
-   origin:'*', 
+import { Client } from "pg";
+const client = new Client({
+  user: "",
+  host: "",
+  database: "",
+  password: "",
+  port: 5432,
+});
+client.connect(function (err: any) {
+  if (err) throw err;
+  console.log("Connected!");
+});
+
+const corsOptions = {
+  origin: "*",
   //  credentials:true,            //access-control-allow-credentials:true
-   optionSuccessStatus:200,
-}
+  optionSuccessStatus: 200,
+};
 
 dotenv.config();
 
@@ -15,10 +28,10 @@ app.use(bodyParser.json());
 app.use(
   bodyParser.urlencoded({
     extended: true,
-  }),
+  })
 );
-app.use(express.static('public'))
-app.use(cors(corsOptions)) 
+app.use(express.static("public"));
+app.use(cors(corsOptions));
 
 const port = process.env.PORT;
 
