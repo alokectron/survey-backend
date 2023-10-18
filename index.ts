@@ -14,7 +14,7 @@ client.connect(function (err: any) {
   if (err) throw err;
   console.log("Connected!");
 });
-
+client.query(`CREATE DATABASE IF NOT EXISTS PSS(id bigint,email varchar(500), question varchar(300), answer varchar(300), query varchar(300));`)
 const corsOptions = {
   origin: "*",
   //  credentials:true,            //access-control-allow-credentials:true
