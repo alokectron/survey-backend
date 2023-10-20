@@ -6,9 +6,9 @@ import { Client } from "pg";
 const client = new Client({
   user: "postgres",
   host: "localhost",
-  database: "alokmishra",
-  password: "",
-  port: 5433,
+  database: "postgres",
+  password: "Mafa@3874",
+  port: 5432,
 });
 
 (async () => {
@@ -40,21 +40,38 @@ app.use(cors(corsOptions));
 
 const port = process.env.PORT;
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
+app.get("/", (req, res) => {
+  res.send("alok");
 });
 
+app.post("/dummy", async (req: Request, res: Response) => {
+  if (req.body.page4Data) {
+    if (Object.keys(req.body.page4Data)?.length != 0) {
+      await dumptodb(req.body.page3Data);
+      await dumptodb(req.body.page1Data);
+      await dumptodb(req.body.page2Data);
+      await dumptodb(req.body.page4Data);
+    }
+  }
+  res.send("success");
+});
+
+async function dumptodb(myobj: Record<string, any>) {
+  for (const key in myobj) {
+    await client.query(
+      `INSERT INTO PSS (email, question, answer) VALUES ('aiy','${key}','${myobj[key]}');`
+    );
+  }
+}
+
 app.post("/form-data", async (req: Request, res: Response) => {
-  console.log(req.body);
   const email = req.body.email;
   const { rows } = await client.query(
     `SELECT * FROM PSS WHERE email = '${email}'`
   );
   delete req.body.email;
   for (const key in req.body) {
-    console.log(rows.length);
     if (rows.length == 0) {
-      console.log("abc");
       await client.query(
         `INSERT INTO PSS (email, question, answer) VALUES ('${email}','${key}','${req.body[key]}');`
       );
@@ -85,6 +102,6 @@ app.get("/form-data", async (req: Request, res: Response) => {
   res.send(rows);
 });
 
-app.listen(port, () => {
+app.listen(7812, "0.0.0.0", 4000, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
