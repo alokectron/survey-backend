@@ -4,11 +4,11 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { Client } from "pg";
 const client = new Client({
-  user: "postgres",
-  host: "localhost",
-  database: "postgres",
-  password: "Mafa@3874",
-  port: 5432,
+  user: "master",
+  host: "smarteye-surveys.database.windows.net",
+  database: "mrkt-srvys-db",
+  password: "L7_qsNmF-2gj_Vn",
+  // port: 5433,
 });
 
 (async () => {
@@ -16,13 +16,13 @@ const client = new Client({
     if (err) throw err;
   });
   await client.query(
-    `CREATE TABLE IF NOT EXISTS PSS(id serial not null primary key, email varchar(500), question varchar(300), answer varchar(300));`
+    `CREATE TABLE IF NOT EXISTS PSS(id serial not null primary key, name varchar(500), email varchar(500), question varchar(300), answer varchar(300));`
   );
 })();
 
 const corsOptions = {
   origin: "*",
-  credentials: true, //access-control-allow-credentials:true
+  // credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
 
@@ -40,40 +40,18 @@ app.use(cors(corsOptions));
 
 const port = process.env.PORT;
 
-app.get("/", (req, res) => {
-  res.send("alok");
-});
-
-app.post("/dummy", async (req: Request, res: Response) => {
-  if (req.body.page4Data) {
-    if (Object.keys(req.body.page4Data)?.length != 0) {
-      await dumptodb(req.body.page3Data);
-      await dumptodb(req.body.page1Data);
-      await dumptodb(req.body.page2Data);
-      await dumptodb(req.body.page4Data);
-    }
-  }
-  res.send("success");
-});
-
-async function dumptodb(myobj: Record<string, any>) {
-  for (const key in myobj) {
-    await client.query(
-      `INSERT INTO PSS (email, question, answer) VALUES ('aiy','${key}','${myobj[key]}');`
-    );
-  }
-}
-
 app.post("/form-data", async (req: Request, res: Response) => {
   const email = req.body.email;
+  const name = req.body.name;
   const { rows } = await client.query(
     `SELECT * FROM PSS WHERE email = '${email}'`
   );
   delete req.body.email;
+  delete req.body.name;
   for (const key in req.body) {
     if (rows.length == 0) {
       await client.query(
-        `INSERT INTO PSS (email, question, answer) VALUES ('${email}','${key}','${req.body[key]}');`
+        `INSERT INTO PSS (email, name, question, answer) VALUES ('${email}','${name}','${key}','${req.body[key]}');`
       );
     } else {
       await client.query(
@@ -102,6 +80,6 @@ app.get("/form-data", async (req: Request, res: Response) => {
   res.send(rows);
 });
 
-app.listen(7812, "0.0.0.0", 4000, () => {
+app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
