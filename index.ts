@@ -64,11 +64,11 @@ app.post("/form-data", async (req: Request, res: Response) => {
 
 app.get("/form-data", async (req: Request, res: Response) => {
   let rows;
-  ({ rows } = await client.query(`SELECT * FROM PSS`));
-  if (req.query.email)
+  if (req.query.email) {
     ({ rows } = await client.query(
       `SELECT * FROM PSS WHERE email = '${req.query.email}'`
     ));
+  }
   if (req.query.question)
     ({ rows } = await client.query(
       `SELECT * FROM PSS WHERE question = '${req.query.question}'`
@@ -77,9 +77,10 @@ app.get("/form-data", async (req: Request, res: Response) => {
     ({ rows } = await client.query(
       `SELECT * FROM PSS WHERE question = '${req.query.question}' and answer = '${req.query.answer}'`
     ));
+  else {
+    ({ rows } = await client.query(`SELECT * FROM PSS`));
+  }
   res.send(rows);
 });
 
-app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-});
+app.listen(port);
