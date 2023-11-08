@@ -4,11 +4,11 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { Client } from "pg";
 const client = new Client({
-  user: "master",
-  host: "smarteye-surveys.database.windows.net",
-  database: "mrkt-srvys-db",
-  password: "L7_qsNmF-2gj_Vn",
-  // port: 5433,
+  user: "postgres",
+  host: "localhost",
+  database: "alokmishra",
+  password: "Mafa&3874",
+  port: 5433,
 });
 
 (async () => {
@@ -38,7 +38,7 @@ app.use(
 app.use(express.static("public"));
 app.use(cors(corsOptions));
 
-const port = process.env.PORT;
+const port = 7300;
 
 app.post("/form-data", async (req: Request, res: Response) => {
   const email = req.body.email;
@@ -64,6 +64,7 @@ app.post("/form-data", async (req: Request, res: Response) => {
 
 app.get("/form-data", async (req: Request, res: Response) => {
   let rows;
+  ({ rows } = await client.query(`SELECT * FROM PSS`));
   if (req.query.email) {
     ({ rows } = await client.query(
       `SELECT * FROM PSS WHERE email = '${req.query.email}'`
@@ -77,9 +78,6 @@ app.get("/form-data", async (req: Request, res: Response) => {
     ({ rows } = await client.query(
       `SELECT * FROM PSS WHERE question = '${req.query.question}' and answer = '${req.query.answer}'`
     ));
-  else {
-    ({ rows } = await client.query(`SELECT * FROM PSS`));
-  }
   res.send(rows);
 });
 
