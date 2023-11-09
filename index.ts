@@ -3,12 +3,13 @@ import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { Client } from "pg";
+import jwt from "jsonwebtoken";
 const client = new Client({
   user: "postgres",
   host: "localhost",
-  database: "alokmishra",
-  password: "Mafa&3874",
-  port: 5433,
+  database: "postgres",
+  password: "Mafa@3874",
+  port: 5432,
 });
 
 (async () => {
@@ -17,6 +18,9 @@ const client = new Client({
   });
   await client.query(
     `CREATE TABLE IF NOT EXISTS PSS(id serial not null primary key, name varchar(500), email varchar(500), question varchar(300), answer varchar(300));`
+  );
+  await client.query(
+    `CREATE TABLE IF NOT EXISTS users(id serial not null primary key, username varchar(500), password varchar(300));`
   );
 })();
 
@@ -79,6 +83,42 @@ app.get("/form-data", async (req: Request, res: Response) => {
       `SELECT * FROM PSS WHERE question = '${req.query.question}' and answer = '${req.query.answer}'`
     ));
   res.send(rows);
+});
+
+app.post("/users", async (req: Request, res: Response) => {
+  const password = req.body.password;
+  const username = req.body.username;
+  const { rows } = await client.query(
+    `SELECT * FROM PSS WHERE email = '${username}'`
+  );
+  if (rows.length == 0) {
+    await client.query(
+      `INSERT INTO PSS (username,password) VALUES ('${username}','${password}');`
+    );
+  } else {
+    await client.query(
+      `UPDATE PSS SET password='${password}' where username = '${username}';`
+    );
+  }
+  res.send("success");
+});
+
+app.post("/login", async (req: Request, res: Response) => {
+  let jwtSecretKey = "alokmishra";
+  let { rows } = await client.query(
+    `SELECT * FROM users WHERE username = '${req.query.username}' AND password = '${req.query.password}'`
+  );
+  if (rows.length != 0) {
+    let data = {
+      time: Date(),
+      userId: 12,
+    };
+
+    const token = jwt.sign(data, jwtSecretKey);
+
+    res.send(token);
+  }
+  res.send("Wrong Credentials");
 });
 
 app.listen(port);
