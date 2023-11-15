@@ -22,6 +22,9 @@ const client = new Client({
   await client.query(
     `CREATE TABLE IF NOT EXISTS users(id serial not null primary key, username varchar(500), password varchar(300));`
   );
+  await client.query(
+    `create table IF NOT EXISTS leads (id serial not null primary key, email varchar(400), type varchar(300), lead_date DATE ARRAY, lead_description VARCHAR(2000) ARRAY);`
+  );
 })();
 
 const corsOptions = {
@@ -119,6 +122,32 @@ app.post("/login", async (req: Request, res: Response) => {
     res.send(token);
   }
   res.send("Wrong Credentials");
+});
+
+app.post("/leads", async (req: Request, res: Response) => {
+  const { rows } = await client.query(
+    `SELECT * FROM leads WHERE email = '${req.body.email}' and type= '${req.body.type}'`
+  );
+  if (rows.length == 0)
+    await client.query(
+      `insert into leads(email,type,lead_date,lead_description) values ('${req.body.email}','${req.body.type}','{${req.body.lead_date}}','{${req.body.lead_description}}');`
+    );
+  else
+    await client.query(
+      `UPDATE leads SET lead_description = array_append(lead_description,'${req.body.lead_description}'), lead_date = array_append(lead_date,'${req.body.lead_date}') WHERE email='${req.body.email}' and type='${req.body.type}';`
+    );
+  res.send("success");
+});
+
+app.get("/leads", async (req: Request, res: Response) => {
+  let rows;
+  if (Object.keys(req.query).length == 0)
+    ({ rows } = await client.query(`SELECT * FROM leads;`));
+  else
+    ({ rows } = await client.query(
+      `SELECT * FROM leads where email='${req.query.email}' and type='${req.query.type}'`
+    ));
+  res.send(rows);
 });
 
 app.listen(port);
