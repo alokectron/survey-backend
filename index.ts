@@ -32,6 +32,7 @@ const corsOptions = {
   // credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
+const jwtSecretKey = "alokmishra";
 
 dotenv.config();
 
@@ -46,6 +47,22 @@ app.use(express.static("public"));
 app.use(cors(corsOptions));
 
 const port = 7300;
+
+function verifyToken(req: Request, res: Response, next: any) {
+  let token = req.headers["authorization"];
+  if (token) {
+    token = token.split(" ")[1];
+    jwt.verify(token.toString(), jwtSecretKey, (err, valid) => {
+      if (err) {
+        res.status(403).send("Unauthorized request");
+      } else {
+        next();
+      }
+    });
+  } else {
+    res.status(403).send("Unauthorized request");
+  }
+}
 
 app.post("/form-data", async (req: Request, res: Response) => {
   const email = req.body.email;
@@ -69,7 +86,7 @@ app.post("/form-data", async (req: Request, res: Response) => {
   res.send("success");
 });
 
-app.get("/form-data", async (req: Request, res: Response) => {
+app.get("/form-data", verifyToken, async (req: Request, res: Response) => {
   let rows;
   ({ rows } = await client.query(`SELECT * FROM PSS`));
   if (req.query.email) {
@@ -107,24 +124,20 @@ app.post("/users", async (req: Request, res: Response) => {
 });
 
 app.post("/login", async (req: Request, res: Response) => {
-  let jwtSecretKey = "alokmishra";
   let { rows } = await client.query(
-    `SELECT * FROM users WHERE username = '${req.query.username}' AND password = '${req.query.password}'`
+    `SELECT * FROM users WHERE username = '${req.body.username}' AND password = '${req.body.password}' LIMIT 1`
   );
   if (rows.length != 0) {
-    let data = {
-      time: Date(),
-      userId: 12,
-    };
-
-    const token = jwt.sign(data, jwtSecretKey);
-
-    res.send(token);
-  }
-  res.send("Wrong Credentials");
+    jwt.sign({ rows }, jwtSecretKey, { expiresIn: "24h" }, (err, token) => {
+      if (err) {
+        res.send("Something went wrong, try again");
+      }
+      res.send({ user: rows, auth: token });
+    });
+  } else res.send({ result: "Wrong Credentials" });
 });
 
-app.post("/leads", async (req: Request, res: Response) => {
+app.post("/leads", verifyToken, async (req: Request, res: Response) => {
   const { rows } = await client.query(
     `SELECT * FROM leads WHERE email = '${req.body.email}' and type= '${req.body.type}'`
   );
@@ -139,7 +152,7 @@ app.post("/leads", async (req: Request, res: Response) => {
   res.send("success");
 });
 
-app.get("/leads", async (req: Request, res: Response) => {
+app.get("/leads", verifyToken, async (req: Request, res: Response) => {
   let rows;
   if (Object.keys(req.query).length == 0)
     ({ rows } = await client.query(`SELECT * FROM leads;`));
