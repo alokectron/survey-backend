@@ -2,15 +2,7 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { Client } from "pg";
 import jwt from "jsonwebtoken";
-const client = new Client({
-  user: "postgres",
-  host: "localhost",
-  database: "postgres",
-  password: "Mafa@3874",
-  port: 5432,
-});
 const sql = require("mssql");
 
 const config = {
@@ -26,46 +18,17 @@ const config = {
     encrypt: true,
   },
 };
-
-connectAndQuery();
-async function connectAndQuery() {
-  try {
-    let poolConnection = await sql.connect(config);
-    await poolConnection
-      .request()
-      .query(
-        `CREATE TABLE packaging_station(id INT NOT NULL IDENTITY(1, 1), name varchar(500), email varchar(500), question varchar(300), answer varchar(300),date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL);`
-      );
-    await poolConnection
-      .request()
-      .query(
-        `CREATE TABLE users(id INT NOT NULL IDENTITY(1, 1), username varchar(500), password varchar(300));`
-      );
-    await poolConnection
-      .request()
-      .query(
-        `create table leads (id INT NOT NULL IDENTITY(1, 1), email varchar(400), type varchar(300), lead_date DATE, lead_description VARCHAR(2000), meeting_scheduled bit DEFAULT 'FALSE', meeting_date datetimeoffset(7) NULL);`
-      );
-    poolConnection.close();
-  } catch (err: any) {
-    console.error(err.message);
-  }
-}
-
-(async () => {
-  client.connect(function (err: any) {
-    if (err) throw err;
-  });
-  await client.query(
-    `CREATE TABLE IF NOT EXISTS packaging_station(id serial not null primary key, name varchar(500), email varchar(500), question varchar(300), answer varchar(300));`
-  );
-  await client.query(
-    `CREATE TABLE IF NOT EXISTS users(id serial not null primary key, username varchar(500), password varchar(300));`
-  );
-  await client.query(
-    `create table IF NOT EXISTS leads (id serial not null primary key, email varchar(400), type varchar(300), lead_date DATE ARRAY, lead_description VARCHAR(2000) ARRAY);`
-  );
-})();
+// connectAndQuery();
+// async function connectAndQuery() {
+//   try {
+//     await sql.connect(config);
+//     await sql.query(`CREATE TABLE packaging_station(id INT NOT NULL IDENTITY(1, 1), name varchar(500), email varchar(500), question varchar(300), answer varchar(300),date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL);`);
+//     await sql.query( `CREATE TABLE users(id INT NOT NULL IDENTITY(1, 1), username varchar(500), password varchar(300));`);
+//     await sql.query(`create table leads (id INT NOT NULL IDENTITY(1, 1), email varchar(400), type varchar(300), lead_date DATE, lead_description VARCHAR(2000), meeting_scheduled bit DEFAULT 'FALSE', meeting_date datetimeoffset(7) NULL);`);
+//   } catch (err: any) {
+//     console.error(err.message);
+//   }
+// }
 
 const corsOptions = {
   origin: "*",
@@ -105,20 +68,20 @@ function verifyToken(req: Request, res: Response, next: any) {
 }
 
 app.post("/form-data", async (req: Request, res: Response) => {
+  await sql.connect(config);
   const email = req.body.email;
   const name = req.body.name;
-  const { rows } = await client.query(
-    `SELECT * FROM packaging_station WHERE email = '${email}'`
-  );
+  const result =
+    await sql.query`SELECT * FROM packaging_station WHERE email = '${email}'`;
   delete req.body.email;
   delete req.body.name;
   for (const key in req.body) {
-    if (rows.length == 0) {
-      await client.query(
+    if (result.recordset.length == 0) {
+      await sql.query(
         `INSERT INTO packaging_station (email, name, question, answer) VALUES ('${email}','${name}','${key}','${req.body[key]}');`
       );
     } else {
-      await client.query(
+      await sql.query(
         `UPDATE packaging_station SET answer='${req.body[key]}' where email = '${email}' and question='${key}';`
       );
     }
@@ -128,35 +91,36 @@ app.post("/form-data", async (req: Request, res: Response) => {
 
 app.get("/form-data", verifyToken, async (req: Request, res: Response) => {
   let rows;
-  ({ rows } = await client.query(`SELECT * FROM packaging_station`));
+  await sql.connect(config);
+  rows = await sql.query`SELECT * FROM packaging_station`;
   if (req.query.email) {
-    ({ rows } = await client.query(
+    rows = await sql.query(
       `SELECT * FROM packaging_station WHERE email = '${req.query.email}'`
-    ));
+    );
   }
   if (req.query.question)
-    ({ rows } = await client.query(
+    rows = await sql.query(
       `SELECT * FROM packaging_station WHERE question = '${req.query.question}'`
-    ));
+    );
   if (req.query.question && req.query.answer)
-    ({ rows } = await client.query(
+    rows = await sql.query(
       `SELECT * FROM packaging_station WHERE question = '${req.query.question}' and answer = '${req.query.answer}'`
-    ));
-  res.send(rows);
+    );
+  res.send(rows.recordset);
 });
 
 app.post("/users", async (req: Request, res: Response) => {
+  await sql.connect(config);
   const password = req.body.password;
   const username = req.body.username;
-  const { rows } = await client.query(
-    `SELECT * FROM packaging_station WHERE email = '${username}'`
-  );
-  if (rows.length == 0) {
-    await client.query(
+  const rows =
+    await sql.query`SELECT * FROM packaging_station WHERE email = '${username}'`;
+  if (rows.recordset.length == 0) {
+    await sql.query(
       `INSERT INTO packaging_station (username,password) VALUES ('${username}','${password}');`
     );
   } else {
-    await client.query(
+    await sql.query(
       `UPDATE packaging_station SET password='${password}' where username = '${username}';`
     );
   }
@@ -164,11 +128,12 @@ app.post("/users", async (req: Request, res: Response) => {
 });
 
 app.post("/login", async (req: Request, res: Response) => {
-  let { rows } = await client.query(
+  await sql.connect(config);
+  let rows = await sql.query(
     `SELECT * FROM users WHERE username = '${req.body.username}' AND password = '${req.body.password}' LIMIT 1`
   );
-  if (rows.length != 0) {
-    jwt.sign({ rows }, jwtSecretKey, { expiresIn: "24h" }, (err, token) => {
+  if (rows.recordset.length != 0) {
+    jwt.sign(rows, jwtSecretKey, { expiresIn: "24h" }, (err, token) => {
       if (err) {
         res.send("Something went wrong, try again");
       }
@@ -178,29 +143,52 @@ app.post("/login", async (req: Request, res: Response) => {
 });
 
 app.post("/leads", verifyToken, async (req: Request, res: Response) => {
-  const { rows } = await client.query(
+  await sql.connect(config);
+
+  const rows = await sql.query(
     `SELECT * FROM leads WHERE email = '${req.body.email}' and type= '${req.body.type}'`
   );
-  if (rows.length == 0)
-    await client.query(
+  if (rows.recordset.length == 0)
+    await sql.query(
       `insert into leads(email,type,lead_date,lead_description) values ('${req.body.email}','${req.body.type}','{${req.body.lead_date}}','{${req.body.lead_description}}');`
     );
-  else
-    await client.query(
-      `UPDATE leads SET lead_description = array_append(lead_description,'${req.body.lead_description}'), lead_date = array_append(lead_date,'${req.body.lead_date}') WHERE email='${req.body.email}' and type='${req.body.type}';`
+  else {
+    let rows;
+    const res =
+      await sql.query`select username from users where password='12345';`;
+    console.log(res.recordset[0].username);
+    rows = await sql.query(
+      `select lead_description from leads where email = '${req.body.email}' and type='${req.body.type}';`
     );
+    const leadDesc = JSON.parse(rows.recordset[0].lead_description);
+    leadDesc.push(req.body.lead_description);
+    rows = await sql.query(
+      `select lead_date from leads where email = '${req.body.email}' and type='${req.body.type}';`
+    );
+    const leadDt = JSON.parse(rows.recordset[0].lead_date);
+    leadDt.push(req.body.lead_date);
+    await sql.query(
+      `UPDATE leads SET lead_description = '${leadDesc}', lead_date = '${leadDt}' WHERE email='${req.body.email}' and type='${req.body.type}';`
+    );
+  }
   res.send("success");
 });
 
 app.get("/leads", verifyToken, async (req: Request, res: Response) => {
+  await sql.connect(config);
   let rows;
   if (Object.keys(req.query).length == 0)
-    ({ rows } = await client.query(`SELECT * FROM leads;`));
+    rows = await sql.query(`SELECT * FROM leads;`);
   else
-    ({ rows } = await client.query(
+    rows = await sql.query(
       `SELECT * FROM leads where email='${req.query.email}' and type='${req.query.type}'`
-    ));
-  res.send(rows);
+    );
+  res.send(rows.recordset);
 });
 
 app.listen(port);
+
+app.get("/test", async (req: Request, res: Response) => {
+  const result = await sql.query`select * from users`;
+  console.log(result.recordset);
+});
