@@ -24,7 +24,7 @@ const config = {
 //     await sql.connect(config);
 //     await sql.query(`CREATE TABLE packaging_station(id INT NOT NULL IDENTITY(1, 1), name varchar(500), email varchar(500), question varchar(300), answer varchar(300),date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL);`);
 //     await sql.query( `CREATE TABLE users(id INT NOT NULL IDENTITY(1, 1), username varchar(500), password varchar(300));`);
-//     await sql.query(`create table leads (id INT NOT NULL IDENTITY(1, 1), email varchar(400), type varchar(300), lead_date DATE, lead_description VARCHAR(2000), meeting_scheduled bit DEFAULT 'FALSE', meeting_date datetimeoffset(7) NULL);`);
+// await sql.query(`create table leads (id INT NOT NULL IDENTITY(1, 1), email varchar(400), type varchar(300), lead_date varchar(300), lead_description VARCHAR(2000), meeting_scheduled bit DEFAULT 'FALSE', meeting_date datetimeoffset(7) NULL);`);
 //   } catch (err: any) {
 //     console.error(err.message);
 //   }
@@ -51,20 +51,15 @@ app.use(cors(corsOptions));
 
 const port = 7300;
 
-function verifyToken(req: Request, res: Response, next: any) {
+async function verifyToken(req: Request, res: Response, next: any) {
   let token = req.headers["authorization"];
   if (token) {
     token = token.split(" ")[1];
     jwt.verify(token.toString(), jwtSecretKey, (err, valid) => {
-      if (err) {
-        res.status(403).send("Unauthorized request");
-      } else {
-        next();
-      }
+      if (err) res.status(403).send("Unauthorized request");
+      else next();
     });
-  } else {
-    res.status(403).send("Unauthorized request");
-  }
+  } else res.status(403).send("Unauthorized request");
 }
 
 app.post("/form-data", async (req: Request, res: Response) => {
@@ -113,15 +108,14 @@ app.post("/users", async (req: Request, res: Response) => {
   await sql.connect(config);
   const password = req.body.password;
   const username = req.body.username;
-  const rows =
-    await sql.query`SELECT * FROM packaging_station WHERE email = '${username}'`;
+  const rows = await sql.query`SELECT * FROM users WHERE email = '${username}'`;
   if (rows.recordset.length == 0) {
     await sql.query(
-      `INSERT INTO packaging_station (username,password) VALUES ('${username}','${password}');`
+      `INSERT INTO users (username,password) VALUES ('${username}','${password}');`
     );
   } else {
     await sql.query(
-      `UPDATE packaging_station SET password='${password}' where username = '${username}';`
+      `UPDATE users SET password='${password}' where username = '${username}';`
     );
   }
   res.send("success");
@@ -130,7 +124,7 @@ app.post("/users", async (req: Request, res: Response) => {
 app.post("/login", async (req: Request, res: Response) => {
   await sql.connect(config);
   let rows = await sql.query(
-    `SELECT * FROM users WHERE username = '${req.body.username}' AND password = '${req.body.password}' LIMIT 1`
+    `SELECT * FROM users WHERE username = '${req.body.username}' AND password = '${req.body.password}'`
   );
   if (rows.recordset.length != 0) {
     jwt.sign(rows, jwtSecretKey, { expiresIn: "24h" }, (err, token) => {
@@ -143,32 +137,30 @@ app.post("/login", async (req: Request, res: Response) => {
 });
 
 app.post("/leads", verifyToken, async (req: Request, res: Response) => {
+  const inputs = JSON.parse(req.headers.value as string);
   await sql.connect(config);
-
   const rows = await sql.query(
-    `SELECT * FROM leads WHERE email = '${req.body.email}' and type= '${req.body.type}'`
+    `SELECT * FROM leads WHERE email = '${inputs.email}' and type= '${inputs.type}'`
   );
+  console.log(rows.recordset);
   if (rows.recordset.length == 0)
     await sql.query(
-      `insert into leads(email,type,lead_date,lead_description) values ('${req.body.email}','${req.body.type}','{${req.body.lead_date}}','{${req.body.lead_description}}');`
+      `insert into leads(email,type,lead_date,lead_description) values ('${inputs.email}','${inputs.type}','${inputs.lead_date}','${inputs.lead_description}');`
     );
   else {
     let rows;
-    const res =
-      await sql.query`select username from users where password='12345';`;
-    console.log(res.recordset[0].username);
     rows = await sql.query(
-      `select lead_description from leads where email = '${req.body.email}' and type='${req.body.type}';`
+      `select lead_description from leads where email = '${inputs.email}' and type='${inputs.type}';`
     );
     const leadDesc = JSON.parse(rows.recordset[0].lead_description);
-    leadDesc.push(req.body.lead_description);
+    leadDesc.push(inputs.lead_description);
     rows = await sql.query(
-      `select lead_date from leads where email = '${req.body.email}' and type='${req.body.type}';`
+      `select lead_date from leads where email = '${inputs.email}' and type='${inputs.type}';`
     );
     const leadDt = JSON.parse(rows.recordset[0].lead_date);
-    leadDt.push(req.body.lead_date);
+    leadDt.push(inputs.lead_date);
     await sql.query(
-      `UPDATE leads SET lead_description = '${leadDesc}', lead_date = '${leadDt}' WHERE email='${req.body.email}' and type='${req.body.type}';`
+      `UPDATE leads SET lead_description = '${leadDesc}', lead_date = '${leadDt}' WHERE email='${inputs.email}' and type='${inputs.type}';`
     );
   }
   res.send("success");
