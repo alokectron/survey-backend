@@ -18,17 +18,17 @@ const config = {
     encrypt: true,
   },
 };
-// connectAndQuery();
-// async function connectAndQuery() {
-//   try {
-//     await sql.connect(config);
-//     await sql.query(`CREATE TABLE packaging_station(id INT NOT NULL IDENTITY(1, 1), name varchar(500), email varchar(500), question varchar(300), answer varchar(300),date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL);`);
-//     await sql.query( `CREATE TABLE users(id INT NOT NULL IDENTITY(1, 1), username varchar(500), password varchar(300));`);
-// await sql.query(`create table leads (id INT NOT NULL IDENTITY(1, 1), email varchar(400), type varchar(300), lead_date varchar(300), lead_description VARCHAR(2000), meeting_scheduled bit DEFAULT 'FALSE', meeting_date datetimeoffset(7) NULL);`);
-//   } catch (err: any) {
-//     console.error(err.message);
-//   }
-// }
+connectAndQuery();
+async function connectAndQuery() {
+  try {
+    await sql.connect(config);
+    //     await sql.query(`CREATE TABLE packaging_station(id INT NOT NULL IDENTITY(1, 1), name varchar(500), email varchar(500), question varchar(300), answer varchar(300),date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL);`);
+    //     await sql.query( `CREATE TABLE users(id INT NOT NULL IDENTITY(1, 1), username varchar(500), password varchar(300));`);
+    // await sql.query(`create table leads (id INT NOT NULL IDENTITY(1, 1), email varchar(400), type varchar(300), lead_date varchar(300), lead_description VARCHAR(2000), meeting_scheduled bit DEFAULT 'FALSE', meeting_date datetimeoffset(7) NULL);`);
+  } catch (err: any) {
+    console.error(err.message);
+  }
+}
 
 const corsOptions = {
   origin: "*",
@@ -139,30 +139,9 @@ app.post("/login", async (req: Request, res: Response) => {
 app.post("/leads", verifyToken, async (req: Request, res: Response) => {
   const inputs = JSON.parse(req.headers.value as string);
   await sql.connect(config);
-  const rows = await sql.query(
-    `SELECT * FROM leads WHERE email = '${inputs.email}' and type= '${inputs.type}'`
+  await sql.query(
+    `insert into leads(email,type,lead_date,lead_description) values ('${inputs.email}','${inputs.type}','${inputs.lead_date}','${inputs.lead_description}');`
   );
-  console.log(rows.recordset);
-  if (rows.recordset.length == 0)
-    await sql.query(
-      `insert into leads(email,type,lead_date,lead_description) values ('${inputs.email}','${inputs.type}','${inputs.lead_date}','${inputs.lead_description}');`
-    );
-  else {
-    let rows;
-    rows = await sql.query(
-      `select lead_description from leads where email = '${inputs.email}' and type='${inputs.type}';`
-    );
-    const leadDesc = JSON.parse(rows.recordset[0].lead_description);
-    leadDesc.push(inputs.lead_description);
-    rows = await sql.query(
-      `select lead_date from leads where email = '${inputs.email}' and type='${inputs.type}';`
-    );
-    const leadDt = JSON.parse(rows.recordset[0].lead_date);
-    leadDt.push(inputs.lead_date);
-    await sql.query(
-      `UPDATE leads SET lead_description = '${leadDesc}', lead_date = '${leadDt}' WHERE email='${inputs.email}' and type='${inputs.type}';`
-    );
-  }
   res.send("success");
 });
 
@@ -176,6 +155,16 @@ app.get("/leads", verifyToken, async (req: Request, res: Response) => {
       `SELECT * FROM leads where email='${req.query.email}' and type='${req.query.type}'`
     );
   res.send(rows.recordset);
+});
+
+app.post("/meets", verifyToken, async (req: Request, res: Response) => {
+  const inputs = JSON.parse(req.headers.value as string);
+  await sql.connect(config);
+  console.log(inputs);
+  await sql.query(
+    `UPDATE leads SET meeting_date = '${inputs.meeting_date}' WHERE email='${inputs.email}' and type='${inputs.type}';`
+  );
+  res.send("success");
 });
 
 app.listen(port);
