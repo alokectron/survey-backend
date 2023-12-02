@@ -63,7 +63,6 @@ async function verifyToken(req: Request, res: Response, next: any) {
 }
 
 app.post("/form-data", async (req: Request, res: Response) => {
-  await sql.connect(config);
   const email = req.body.email;
   const name = req.body.name;
   const result =
@@ -86,7 +85,7 @@ app.post("/form-data", async (req: Request, res: Response) => {
 
 app.get("/form-data", verifyToken, async (req: Request, res: Response) => {
   let rows;
-  await sql.connect(config);
+
   rows = await sql.query`SELECT * FROM packaging_station`;
   if (req.query.email) {
     rows = await sql.query(
@@ -105,7 +104,6 @@ app.get("/form-data", verifyToken, async (req: Request, res: Response) => {
 });
 
 app.post("/users", async (req: Request, res: Response) => {
-  await sql.connect(config);
   const password = req.body.password;
   const username = req.body.username;
   const rows = await sql.query`SELECT * FROM users WHERE email = '${username}'`;
@@ -122,7 +120,6 @@ app.post("/users", async (req: Request, res: Response) => {
 });
 
 app.post("/login", async (req: Request, res: Response) => {
-  await sql.connect(config);
   let rows = await sql.query(
     `SELECT * FROM users WHERE username = '${req.body.username}' AND password = '${req.body.password}'`
   );
@@ -138,7 +135,7 @@ app.post("/login", async (req: Request, res: Response) => {
 
 app.post("/leads", verifyToken, async (req: Request, res: Response) => {
   const inputs = JSON.parse(req.headers.value as string);
-  await sql.connect(config);
+
   await sql.query(
     `insert into leads(email,type,lead_date,lead_description) values ('${inputs.email}','${inputs.type}','${inputs.lead_date}','${inputs.lead_description}');`
   );
@@ -146,7 +143,6 @@ app.post("/leads", verifyToken, async (req: Request, res: Response) => {
 });
 
 app.get("/leads", verifyToken, async (req: Request, res: Response) => {
-  await sql.connect(config);
   let rows;
   if (Object.keys(req.query).length == 0)
     rows = await sql.query(`SELECT * FROM leads;`);
@@ -159,8 +155,7 @@ app.get("/leads", verifyToken, async (req: Request, res: Response) => {
 
 app.post("/meets", verifyToken, async (req: Request, res: Response) => {
   const inputs = JSON.parse(req.headers.value as string);
-  await sql.connect(config);
-  console.log(inputs);
+
   await sql.query(
     `UPDATE leads SET meeting_date = '${inputs.meeting_date}' WHERE email='${inputs.email}' and type='${inputs.type}';`
   );
