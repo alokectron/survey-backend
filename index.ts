@@ -6,11 +6,11 @@ import jwt from "jsonwebtoken";
 const sql = require("mssql");
 
 const config = {
-  user: "master", // better stored in an app setting such as process.env.DB_USER
-  password: "L7_qsNmF-2gj_Vn", // better stored in an app setting such as process.env.DB_PASSWORD
-  server: "smarteye-surveys.database.windows.net", // better stored in an app setting such as process.env.DB_SERVER
-  port: 1433, // optional, defaults to 1433, better stored in an app setting such as process.env.DB_PORT
-  database: "mrkt-srvys-db", // better stored in an app setting such as process.env.DB_NAME
+  user: "master",
+  password: "L7_qsNmF-2gj_Vn",
+  server: "smarteye-surveys.database.windows.net",
+  port: 1433,
+  database: "mrkt-srvys-db",
   authentication: {
     type: "default",
   },
