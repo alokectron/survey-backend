@@ -32,7 +32,7 @@ app.post("/login", logiIn);
 
 app.post("/leads", verifyToken, postLeads);
 
-app.get("/leads",  getLeads);
+app.get("/leads", verifyToken, getLeads);
 
 app.post("/meets", verifyToken, postMeets);
 
